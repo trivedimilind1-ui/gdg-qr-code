@@ -56,31 +56,32 @@ export function evaluateScanReliability(params: {
   margin: number;
   errorCorrection: ErrorCorrectionLevel;
   hasLogo?: boolean;
+  logoSize?: number;
   payloadLength?: number;
 }): ReliabilityAssessment {
-  const { foreground, background, margin, errorCorrection, hasLogo, payloadLength = 0 } = params;
+  const { foreground, background, margin, errorCorrection, hasLogo, logoSize = 20, payloadLength = 0 } = params;
 
   const contrastRatio = calculateContrastRatio(foreground, background);
   const warnings: string[] = [];
   const tips: string[] = [];
   let score = 100;
 
-  // Contrast check
-  let contrastStatus: 'excellent' | 'good' | 'warning' = 'excellent';
-  let contrastLabel = 'Excellent contrast';
+  // Contrast check using clear, non-absolute terminology
+  let contrastStatus: 'strong' | 'acceptable' | 'low' = 'strong';
+  let contrastLabel = 'Strong contrast';
 
   if (contrastRatio >= 7) {
-    contrastStatus = 'excellent';
-    contrastLabel = `Excellent contrast (${contrastRatio}:1)`;
+    contrastStatus = 'strong';
+    contrastLabel = `Strong contrast (${contrastRatio}:1)`;
   } else if (contrastRatio >= 3.5) {
-    contrastStatus = 'good';
-    contrastLabel = `Good contrast (${contrastRatio}:1)`;
+    contrastStatus = 'acceptable';
+    contrastLabel = `Acceptable contrast (${contrastRatio}:1)`;
     score -= 15;
   } else {
-    contrastStatus = 'warning';
+    contrastStatus = 'low';
     contrastLabel = `Low contrast (${contrastRatio}:1)`;
     score -= 40;
-    warnings.push('Low contrast may make this QR code difficult or impossible for cameras to scan.');
+    warnings.push('Low contrast may make this QR code harder to scan.');
   }
 
   // Check inverted colors (light foreground on dark background)
@@ -92,22 +93,27 @@ export function evaluateScanReliability(params: {
     tips.push('Inverted colors (light QR on dark background) are supported by most modern phones, but standard dark-on-light yields the highest scan rate across all devices.');
   }
 
-  // Margin check
+  // Margin / Quiet Zone check
   if (margin < 1) {
     warnings.push('No quiet zone (margin = 0). Scanners need white space around the QR code to distinguish it from surrounding graphics.');
     score -= 25;
   } else if (margin < 2) {
-    tips.push('Quiet zone is narrow. Increasing margin to at least 2 or 3 improves scan reliability.');
-    score -= 10;
+    warnings.push('Small quiet zone may reduce scan reliability. Increasing margin to 2 or more is recommended.');
+    score -= 15;
   }
 
   // Error correction and logo check
   if (hasLogo) {
     if (errorCorrection === 'L' || errorCorrection === 'M') {
-      warnings.push(`Level ${errorCorrection} error correction with a center logo may obstruct reading. Quartile (Q ~25%) or High (H ~30%) is strongly recommended.`);
+      warnings.push(`Level ${errorCorrection} error correction with a center logo may obstruct reading. Quartile (Q ~25%) or High (H ~30%) is recommended.`);
       score -= 25;
     } else {
       tips.push(`High error correction (${errorCorrection}) safely protects code data under the logo area.`);
+    }
+
+    if (logoSize > 22) {
+      warnings.push(`Logo scale (${logoSize}%) covers significant central modules. Test scan readability on your target devices.`);
+      score -= 10;
     }
   }
 
@@ -121,7 +127,7 @@ export function evaluateScanReliability(params: {
   let status: 'excellent' | 'good' | 'warning' = 'excellent';
   if (score >= 85 && warnings.length === 0) {
     status = 'excellent';
-  } else if (score >= 60 && contrastStatus !== 'warning' && margin >= 1) {
+  } else if (score >= 60 && contrastStatus !== 'low' && margin >= 1) {
     status = 'good';
   } else {
     status = 'warning';

@@ -16,6 +16,20 @@ function escapeWifi(str: string): string {
 }
 
 /**
+ * Normalizes a URL input string consistently across the application:
+ * - Trims whitespace
+ * - Prepends https:// if no scheme is specified (e.g. "google.com" -> "https://google.com")
+ */
+export function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
+/**
  * Generates the QR code payload string based on type and input data.
  */
 export function generateQRPayload(type: QRType, data: unknown): string {
@@ -25,12 +39,7 @@ export function generateQRPayload(type: QRType, data: unknown): string {
     case 'url': {
       const { url } = data as URLData;
       if (!url || !url.trim()) return '';
-      const trimmed = url.trim();
-      // Ensure protocol is present for URLs if missing
-      if (!/^https?:\/\//i.test(trimmed)) {
-        return `https://${trimmed}`;
-      }
-      return trimmed;
+      return normalizeUrl(url);
     }
 
     case 'text': {
@@ -82,7 +91,7 @@ export function getQRSummaryTitle(config: QRConfig): string {
     case 'url': {
       const d = data as URLData;
       try {
-        const u = new URL(d.url.startsWith('http') ? d.url : `https://${d.url}`);
+        const u = new URL(normalizeUrl(d.url));
         return u.hostname + (u.pathname !== '/' ? u.pathname : '');
       } catch {
         return d.url || 'Web link';

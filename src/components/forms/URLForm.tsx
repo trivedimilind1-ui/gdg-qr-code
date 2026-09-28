@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe, AlertCircle, ExternalLink } from 'lucide-react';
 import type { URLData, ValidationErrors } from '../../types/qr';
+import { normalizeUrl } from '../../utils/qrPayload';
 
 interface URLFormProps {
   data: URLData;
@@ -50,7 +51,7 @@ export const URLForm: React.FC<URLFormProps> = ({
           {data.url && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <a
-                href={data.url.startsWith('http') ? data.url : `https://${data.url}`}
+                href={normalizeUrl(data.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Test URL link"

@@ -28,19 +28,26 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
       try {
-        const newValue = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(newValue);
+        setStoredValue((current) => {
+          const newValue = value instanceof Function ? value(current) : value;
 
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, JSON.stringify(newValue));
-          // Dispatch storage event so other tabs or listeners sync
-          window.dispatchEvent(new StorageEvent('storage', { key }));
-        }
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage.setItem(key, JSON.stringify(newValue));
+              // Dispatch storage event so other tabs or listeners sync
+              window.dispatchEvent(new StorageEvent('storage', { key }));
+            } catch (storageError) {
+              console.warn(`LocalStorage quota exceeded or unavailable for "${key}":`, storageError);
+            }
+          }
+
+          return newValue;
+        });
       } catch (error) {
-        console.warn(`Error setting localStorage key "${key}":`, error);
+        console.warn(`Error setting state for "${key}":`, error);
       }
     },
-    [key, storedValue]
+    [key]
   );
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type {
   QRType,
   QRConfig,
@@ -86,9 +86,10 @@ export function App() {
       margin: config.margin,
       errorCorrection: config.errorCorrection,
       hasLogo: Boolean(config.logo),
+      logoSize: config.logoSize,
       payloadLength: payload.length,
     });
-  }, [config.foreground, config.background, config.margin, config.errorCorrection, config.logo, payload]);
+  }, [config.foreground, config.background, config.margin, config.errorCorrection, config.logo, config.logoSize, payload]);
 
   // Real-time QR renderer
   const { canvasRef, isGenerating, error } = useQRCode(config, payload);
@@ -150,30 +151,58 @@ export function App() {
     showToast(`Applied preset: ${preset.name}`, 'info');
   };
 
-  // Record into History
+  // Helper to fingerprint a configuration for duplicate detection
+  const getConfigFingerprint = useCallback((cfg: QRConfig, pld: string) => {
+    return `${cfg.type}::${pld}::${cfg.foreground}::${cfg.background}::${cfg.margin}::${cfg.errorCorrection}::${cfg.logo ? '1' : '0'}`;
+  }, []);
+
+  // Save or update an entry in history without duplicate spam
+  const saveToHistory = useCallback(
+    (cfg: QRConfig, pld: string) => {
+      if (!pld || !pld.trim()) return;
+      const title = getQRSummaryTitle(cfg);
+      const fingerprint = getConfigFingerprint(cfg, pld);
+
+      setRecents((prev) => {
+        const existingIndex = prev.findIndex(
+          (item) => getConfigFingerprint(item.config, item.payload) === fingerprint
+        );
+
+        const newEntry: RecentQREntry = {
+          id: existingIndex >= 0 ? prev[existingIndex].id : Date.now().toString(),
+          timestamp: Date.now(),
+          type: cfg.type,
+          title,
+          payload: pld,
+          config: JSON.parse(JSON.stringify(cfg)),
+        };
+
+        if (existingIndex === 0) {
+          const updated = [...prev];
+          updated[0] = newEntry;
+          return updated;
+        }
+
+        const filtered = existingIndex > 0 ? prev.filter((_, idx) => idx !== existingIndex) : prev;
+        return [newEntry, ...filtered.slice(0, 19)];
+      });
+    },
+    [getConfigFingerprint, setRecents]
+  );
+
+  // Auto-record to history when a valid QR settles for 2.5s
+  useEffect(() => {
+    if (!isValid || !payload || !payload.trim()) return;
+    const timer = setTimeout(() => {
+      saveToHistory(config, payload);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [config, payload, isValid, saveToHistory]);
+
   const handleRecordHistory = useCallback(() => {
-    if (!payload) return;
-    const title = getQRSummaryTitle(config);
-
-    setRecents((prev) => {
-      // Avoid duplicate top entry
-      if (prev.length > 0 && prev[0].payload === payload && prev[0].type === config.type) {
-        return prev;
-      }
-
-      const newEntry: RecentQREntry = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
-        type: config.type,
-        title,
-        payload,
-        config: JSON.parse(JSON.stringify(config)),
-      };
-
-      // Keep latest 20 items
-      return [newEntry, ...prev.slice(0, 19)];
-    });
-  }, [config, payload, setRecents]);
+    saveToHistory(config, payload);
+  }, [config, payload, saveToHistory]);
 
   // Reuse history item
   const handleReuseHistory = (restoredConfig: QRConfig) => {

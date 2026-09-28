@@ -15,23 +15,24 @@ Live Repository: [https://github.com/trivedimilind1-ui/gdg-qr-code](https://gith
 ## 🚀 Key Features
 
 ### 1. Multi-Format QR Payloads
-- **URL**: Generates standard website links with automatic protocol normalization (`https://`) and real-time validation.
-- **Plain Text**: Supports full multiline UTF-8 text, Unicode characters, and emojis with character counts.
+- **URL**: Generates standard website links with automatic protocol normalization (`https://`), real-time domain validation, and external preview tester.
+- **Plain Text**: Supports full multiline UTF-8 text, Unicode characters, and emojis with live character counts.
 - **Email**: Compliant RFC 6068 `mailto:` payload with recipient, optional subject, and message body with proper URI encoding.
 - **Phone**: Standard RFC 3966 `tel:` links supporting international calling codes (`+1`, `+91`, `+44`, etc.).
-- **Wi-Fi**: Standard `WIFI:T:...;S:...;P:...;H:...;;` format supporting WPA/WPA2/WPA3, WEP, and Open networks, with hidden SSID flags and parameter character escaping.
+- **Wi-Fi**: Standard `WIFI:T:...;S:...;P:...;H:...;;` format supporting WPA/WPA2, WEP, and Open networks, with hidden SSID flags and parameter character escaping.
 
 ### 2. Live Real-Time Rendering Engine
 - **Instant Debounced Feedback**: QR preview renders automatically on every parameter change without requiring a manual "Generate" button.
+- **Clear Preview vs Export Resolution**: The interactive live preview stays optimized at 512px for responsive performance, while PNG downloads are rendered at your exact selected resolution (128px – 1024px).
 - **Zero Placeholder / Fake QRs**: The preview canvas renders the exact barcode data that is exported.
 - **Interactive States**: Polished empty and error states guide user input before valid data is provided.
 
 ### 3. Deep Customization & Styling
-- **Size / Resolution**: Granular slider and numeric indicator from 128px up to 1024px (HD export).
-- **Color Pickers**: Integrated native color pickers with two-way synchronized HEX inputs and hex format validation.
+- **Export Resolution**: Granular slider and numeric indicator from 128px up to 1024px (HD export).
+- **Color Pickers & Hex Validation**: Integrated native color pickers with two-way synchronized HEX inputs and accessible inline validation (`#000000`, `#FFF`).
 - **Error Correction**: Toggle between Low (L ~7%), Medium (M ~15%), Quartile (Q ~25%), and High (H ~30%) recovery levels.
 - **Quiet Zone (Margin)**: Adjustable safe margins (0 to 6 blocks) to ensure camera separation from surroundings.
-- **Center Logo Overlay**: Upload a custom icon/image from your device with automatic protective backing and automatic High (H) error correction suggestion.
+- **Center Logo Overlay**: Upload a custom icon/image from your device with automatic protective backing, scale control (10%–25%), client-side image downscaling for localStorage safety, and automatic High (H) error correction suggestion.
 
 ### 4. 1-Click Design Presets
 Includes predefined visual themes that can be applied instantly and customized further:
@@ -43,26 +44,29 @@ Includes predefined visual themes that can be applied instantly and customized f
 - **Sunset**: Warm crimson `#BE123C` on delicate rose `#FFF1F2`.
 - **Cyberpunk**: Bold amber gold `#FACC15` on obsidian `#18181B`.
 
-### 5. ISO & WCAG Scan Reliability Diagnostics
+### 5. Estimated Scan Readability Diagnostics
 - **Relative Luminance Calculation**: Real-time evaluation using WCAG 2.1 linearized formulas ($L = 0.2126R + 0.7152G + 0.0722B$).
-- **Contrast Meter**: Displays calculated contrast ratio (e.g., `14.2:1`) with categorized indicators (*Excellent*, *Good*, *Warning*).
-- **Proactive Warnings**: Alerts users to low contrast, missing quiet zones, or logo obstruction risks before printing or distribution.
+- **Color Contrast Gauge**: Categorizes contrast into *Strong*, *Acceptable*, or *Low* contrast with calculated numeric ratio.
+- **Heuristic Quality Readout**: Calculates an overall readability score based on contrast, quiet zone, error correction level, and logo scale.
+- **Proactive Warnings**: Non-intrusive advisories alert users to low contrast, small quiet zones, or logo obstruction risks before printing or distribution.
+- *Note: This diagnostic evaluates optical code parameters as a heuristic and does not replace physical camera testing under real-world lighting, printing, and display conditions.*
 
 ### 6. Vector & Raster Exports
-- **Download PNG**: Direct pixel-perfect canvas raster export at user's exact chosen resolution.
-- **Download SVG**: Clean, scalable vector graphic export for professional print and graphic design.
+- **Download PNG**: Direct pixel-perfect canvas raster export at user's exact chosen resolution. Includes custom logo with protective backing.
+- **Download SVG**: Clean, scalable vector graphic export for professional print design. Seamlessly embeds custom logos with vector protective backing matching the PNG export.
 - **Copy to Clipboard**: Direct 1-click clipboard integration using modern browser `navigator.clipboard.write([ClipboardItem])` with toast confirmation.
 
 ### 7. Persistent Local History
-- Stored safely in browser `localStorage` using a typed `useLocalStorage` hook.
+- Stored safely in browser `localStorage` using a resilient `useLocalStorage` hook with quota error protection.
+- Automatically saves valid QR codes with debouncing and fingerprint-based duplicate detection.
 - Retains up to 20 recent configurations with titles, timestamps, and color swatches.
-- **1-Click Reuse**: Instantly restores complete configuration (type, inputs, colors, margins, size) back to the active editor.
+- **1-Click Reuse**: Instantly restores complete configuration (type, inputs, colors, margins, size, logo) back to the active editor.
 - Individual deletion and "Clear All" with confirmation safeguard.
 
 ### 8. Modern SaaS UI & Accessibility
 - **Theme Toggle**: Light and Dark mode with automatic detection of OS preference (`prefers-color-scheme`).
 - **Responsive Layout**: Two-column layout on desktop; seamless touch-friendly stacked layout on tablets and mobile devices with zero horizontal overflow.
-- **Accessible Design**: Semantic HTML5 elements, proper form labels, ARIA landmarks, visible focus rings, and high contrast.
+- **Accessible Design**: Semantic HTML5 elements, proper form labels, accessible color input validation, ARIA landmarks, visible focus rings, and high contrast.
 
 ---
 

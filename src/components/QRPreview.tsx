@@ -40,8 +40,11 @@ export const QRPreview: React.FC<QRPreviewProps> = ({
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               {config.type}
             </span>
-            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800">
-              {config.size} × {config.size}px
+            <span
+              className="px-2 py-0.5 rounded-md text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-800"
+              title="Selected PNG export dimension (preview rendered at 512px for optimal responsive display)"
+            >
+              Export: {config.size}px
             </span>
           </div>
 

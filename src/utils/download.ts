@@ -45,8 +45,9 @@ export async function renderQRToCanvas(config: QRConfig): Promise<HTMLCanvasElem
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
-          // Logo size is approximately 22% of total QR size
-          const logoSize = Math.round(config.size * 0.22);
+          // Logo size based on user preference (10% to 25%, default 20%)
+          const logoRatio = (config.logoSize || 20) / 100;
+          const logoSize = Math.round(config.size * logoRatio);
           const x = (config.size - logoSize) / 2;
           const y = (config.size - logoSize) / 2;
           const padding = Math.max(4, Math.round(logoSize * 0.12));
@@ -98,7 +99,7 @@ export async function downloadPNG(config: QRConfig, filename = 'qr-code.png'): P
 }
 
 /**
- * Downloads the QR code as an SVG vector file.
+ * Downloads the QR code as an SVG vector file, including logo and protective backing if enabled.
  */
 export async function downloadSVG(config: QRConfig, filename = 'qr-code.svg'): Promise<void> {
   const payload = generateQRPayload(config.type, config.data);
@@ -106,7 +107,7 @@ export async function downloadSVG(config: QRConfig, filename = 'qr-code.svg'): P
     throw new Error('No QR payload to render');
   }
 
-  const svgString = await QRCode.toString(payload, {
+  let svgString = await QRCode.toString(payload, {
     type: 'svg',
     width: config.size,
     margin: config.margin,
@@ -116,6 +117,28 @@ export async function downloadSVG(config: QRConfig, filename = 'qr-code.svg'): P
       light: config.background,
     },
   });
+
+  // If a logo is present, embed it cleanly into the SVG vector graphics
+  if (config.logo) {
+    const viewBoxMatch = svgString.match(/viewBox="0 0 (\d+(\.\d+)?) (\d+(\.\d+)?)"/);
+    if (viewBoxMatch) {
+      const vbW = parseFloat(viewBoxMatch[1]);
+      const vbH = parseFloat(viewBoxMatch[3]);
+      const logoRatio = (config.logoSize || 20) / 100;
+      const logoSize = Math.round(vbW * logoRatio * 10) / 10;
+      const padding = Math.max(0.4, Math.round(logoSize * 0.12 * 10) / 10);
+      const bgW = Math.round((logoSize + padding * 2) * 10) / 10;
+      const bgH = Math.round((logoSize + padding * 2) * 10) / 10;
+      const x = Math.round(((vbW - logoSize) / 2) * 10) / 10;
+      const y = Math.round(((vbH - logoSize) / 2) * 10) / 10;
+      const bgX = Math.round(((vbW - bgW) / 2) * 10) / 10;
+      const bgY = Math.round(((vbH - bgH) / 2) * 10) / 10;
+      const radius = Math.round(logoSize * 0.18 * 10) / 10;
+
+      const logoSvgGroup = `  <rect x="${bgX}" y="${bgY}" width="${bgW}" height="${bgH}" rx="${radius}" fill="${config.background}" />\n  <image href="${config.logo}" x="${x}" y="${y}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet" />\n</svg>`;
+      svgString = svgString.replace(/<\/svg>\s*$/, logoSvgGroup);
+    }
+  }
 
   const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);

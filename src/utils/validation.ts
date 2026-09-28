@@ -1,4 +1,5 @@
 import type { QRType, QRData, URLData, TextData, EmailData, PhoneData, WifiData, ValidationErrors } from '../types/qr';
+import { normalizeUrl } from './qrPayload';
 
 export function isValidHexColor(hex: string): boolean {
   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex.trim());
@@ -11,10 +12,14 @@ export function isValidEmail(email: string): boolean {
 
 export function isValidUrl(url: string): boolean {
   if (!url || !url.trim()) return false;
-  const trimmed = url.trim();
+  const normalized = normalizeUrl(url);
   try {
-    const parsed = new URL(trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname;
+    if (!hostname) return false;
+    if (hostname === 'localhost') return true;
+    return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(hostname) || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
   } catch {
     return false;
   }

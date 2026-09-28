@@ -60,7 +60,8 @@ export function useQRCode(config: QRConfig, payload: string): UseQRCodeReturn {
               img.crossOrigin = 'anonymous';
               img.onload = () => {
                 if (isCancelled) return resolve();
-                const logoSize = Math.round(renderSize * 0.22);
+                const logoRatio = (config.logoSize || 20) / 100;
+                const logoSize = Math.round(renderSize * logoRatio);
                 const x = (renderSize - logoSize) / 2;
                 const y = (renderSize - logoSize) / 2;
                 const padding = Math.max(4, Math.round(logoSize * 0.12));
@@ -122,6 +123,7 @@ export function useQRCode(config: QRConfig, payload: string): UseQRCodeReturn {
     config.errorCorrection,
     config.margin,
     config.logo,
+    config.logoSize,
   ]);
 
   const activeDataUrl = payload && payload.trim() ? dataUrl : null;

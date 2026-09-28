@@ -75,9 +75,9 @@ export const WifiForm: React.FC<WifiFormProps> = ({
           onChange={(e) => onChange('encryption', e.target.value as WifiEncryption)}
           className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl text-sm transition-all focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 cursor-pointer"
         >
-          <option value="WPA">WPA / WPA2 / WPA3 (Recommended)</option>
+          <option value="WPA">WPA / WPA2 (Standard)</option>
           <option value="WEP">WEP (Legacy)</option>
-          <option value="nopass">None / Open Network</option>
+          <option value="nopass">None (Open Network)</option>
         </select>
       </div>
 

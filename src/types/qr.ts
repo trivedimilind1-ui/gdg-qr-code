@@ -48,6 +48,7 @@ export interface QRConfig {
   errorCorrection: ErrorCorrectionLevel;
   margin: number;
   logo?: string | null;
+  logoSize?: number;
 }
 
 export interface QRPreset {
@@ -75,7 +76,7 @@ export interface ReliabilityAssessment {
   score: number;
   contrastRatio: number;
   contrastLabel: string;
-  contrastStatus: 'excellent' | 'good' | 'warning';
+  contrastStatus: 'strong' | 'acceptable' | 'low';
   warnings: string[];
   tips: string[];
 }

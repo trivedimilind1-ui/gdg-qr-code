@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sliders, Palette, Shield, Maximize2, Image as ImageIcon, Trash2, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sliders, Palette, Shield, Maximize2, Image as ImageIcon, Trash2, HelpCircle, AlertCircle } from 'lucide-react';
 import type { ErrorCorrectionLevel, QRConfig } from '../types/qr';
 import { isValidHexColor } from '../utils/validation';
 
@@ -21,33 +21,40 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   onChange,
   onLogoUpload,
 }) => {
-  const [fgDraft, setFgDraft] = useState<string | null>(null);
-  const [prevFg, setPrevFg] = useState(config.foreground);
-  if (config.foreground !== prevFg) {
-    setPrevFg(config.foreground);
-    setFgDraft(null);
-  }
-  const fgHexInput = fgDraft !== null ? fgDraft : config.foreground;
+  // Local input states for free text editing
+  const [fgInput, setFgInput] = useState(config.foreground);
+  const [bgInput, setBgInput] = useState(config.background);
+  const [fgError, setFgError] = useState<string | null>(null);
+  const [bgError, setBgError] = useState<string | null>(null);
 
-  const [bgDraft, setBgDraft] = useState<string | null>(null);
-  const [prevBg, setPrevBg] = useState(config.background);
-  if (config.background !== prevBg) {
-    setPrevBg(config.background);
-    setBgDraft(null);
-  }
-  const bgHexInput = bgDraft !== null ? bgDraft : config.background;
+  // Synchronize when config changes externally (e.g. preset selection or history restore)
+  useEffect(() => {
+    setFgInput(config.foreground);
+    setFgError(null);
+  }, [config.foreground]);
+
+  useEffect(() => {
+    setBgInput(config.background);
+    setBgError(null);
+  }, [config.background]);
 
   const handleFgHexChange = (val: string) => {
-    setFgDraft(val);
+    setFgInput(val);
     if (isValidHexColor(val)) {
+      setFgError(null);
       onChange('foreground', val);
+    } else {
+      setFgError('Invalid HEX color (e.g. #000000 or #333)');
     }
   };
 
   const handleBgHexChange = (val: string) => {
-    setBgDraft(val);
+    setBgInput(val);
     if (isValidHexColor(val)) {
+      setBgError(null);
       onChange('background', val);
+    } else {
+      setBgError('Invalid HEX color (e.g. #FFFFFF or #F0F)');
     }
   };
 
@@ -55,22 +62,54 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: max 3MB for client-side logo
-    if (file.size > 3 * 1024 * 1024) {
-      alert('Logo image should be under 3MB');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo image should be under 5MB');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        onLogoUpload(result);
-        // Automatically suggest or elevate error correction to H for resilience
+      const rawResult = event.target?.result as string;
+      if (!rawResult) return;
+
+      // Downscale logo to max 256x256 using an offscreen canvas to keep localStorage usage small & fast
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const optimizedDataUrl = canvas.toDataURL('image/png');
+          onLogoUpload(optimizedDataUrl);
+        } else {
+          onLogoUpload(rawResult);
+        }
+
+        // Elevate error correction to High (H) automatically for logo safety
         if (config.errorCorrection !== 'H') {
           onChange('errorCorrection', 'H');
         }
-      }
+      };
+      img.onerror = () => {
+        onLogoUpload(rawResult);
+      };
+      img.src = rawResult;
     };
     reader.readAsDataURL(file);
   };
@@ -104,23 +143,39 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                 <input
                   id="fg-color-picker"
                   type="color"
-                  value={config.foreground}
+                  value={isValidHexColor(fgInput) ? fgInput : config.foreground}
                   onChange={(e) => {
-                    onChange('foreground', e.target.value);
-                    setFgDraft(e.target.value);
+                    const newColor = e.target.value;
+                    setFgInput(newColor);
+                    setFgError(null);
+                    onChange('foreground', newColor);
                   }}
                   className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer border-0"
+                  aria-label="Foreground color picker"
                 />
               </div>
               <input
                 type="text"
-                value={fgHexInput}
+                value={fgInput}
                 onChange={(e) => handleFgHexChange(e.target.value)}
                 maxLength={7}
                 placeholder="#000000"
-                className="w-full px-2.5 py-1.5 font-mono text-xs uppercase bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                aria-label="Foreground hex code"
+                aria-invalid={Boolean(fgError)}
+                aria-describedby={fgError ? 'fg-error' : undefined}
+                className={`w-full px-2.5 py-1.5 font-mono text-xs uppercase bg-slate-50 dark:bg-slate-800/80 border rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none transition-colors ${
+                  fgError
+                    ? 'border-rose-400 dark:border-rose-600 focus:ring-1 focus:ring-rose-500'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
+                }`}
               />
             </div>
+            {fgError && (
+              <p id="fg-error" role="alert" className="flex items-center gap-1 text-[11px] text-rose-500 font-medium">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                <span>{fgError}</span>
+              </p>
+            )}
           </div>
 
           {/* Background Color */}
@@ -133,35 +188,51 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                 <input
                   id="bg-color-picker"
                   type="color"
-                  value={config.background}
+                  value={isValidHexColor(bgInput) ? bgInput : config.background}
                   onChange={(e) => {
-                    onChange('background', e.target.value);
-                    setBgDraft(e.target.value);
+                    const newColor = e.target.value;
+                    setBgInput(newColor);
+                    setBgError(null);
+                    onChange('background', newColor);
                   }}
                   className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer border-0"
+                  aria-label="Background color picker"
                 />
               </div>
               <input
                 type="text"
-                value={bgHexInput}
+                value={bgInput}
                 onChange={(e) => handleBgHexChange(e.target.value)}
                 maxLength={7}
                 placeholder="#FFFFFF"
-                className="w-full px-2.5 py-1.5 font-mono text-xs uppercase bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                aria-label="Background hex code"
+                aria-invalid={Boolean(bgError)}
+                aria-describedby={bgError ? 'bg-error' : undefined}
+                className={`w-full px-2.5 py-1.5 font-mono text-xs uppercase bg-slate-50 dark:bg-slate-800/80 border rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none transition-colors ${
+                  bgError
+                    ? 'border-rose-400 dark:border-rose-600 focus:ring-1 focus:ring-rose-500'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
+                }`}
               />
             </div>
+            {bgError && (
+              <p id="bg-error" role="alert" className="flex items-center gap-1 text-[11px] text-rose-500 font-medium">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                <span>{bgError}</span>
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Size & Margin Sliders */}
+      {/* Export Size & Margin Sliders */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Dimensions Slider */}
+        {/* PNG Export Resolution */}
         <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
           <div className="flex items-center justify-between">
             <label htmlFor="size-slider" className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
-              <span>Export Resolution</span>
+              <span>PNG Export Resolution</span>
             </label>
             <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">
               {config.size} × {config.size}px
@@ -182,6 +253,9 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             <span>512px (Standard)</span>
             <span>1024px (HD)</span>
           </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+            Sets downloaded PNG pixel dimension. Live preview remains optimized at 512px.
+          </p>
         </div>
 
         {/* Quiet Zone / Margin Slider */}
@@ -210,6 +284,9 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             <span>2-3 (Optimal)</span>
             <span>6 (Wide)</span>
           </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+            Margin is the clear border area scanners require around the code.
+          </p>
         </div>
       </div>
 
@@ -223,7 +300,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
           <div className="group relative">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400 cursor-help" />
             <div className="absolute right-0 bottom-6 hidden group-hover:block w-56 p-2 rounded-lg bg-slate-900 text-white text-[11px] leading-tight z-30 shadow-xl">
-              Higher error correction allows QR codes to be decoded even if damaged or obscured by a logo.
+              Higher error correction allows QR codes to be decoded even if partially damaged or obscured by a logo.
             </div>
           </div>
         </div>
@@ -257,7 +334,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </div>
       </div>
 
-      {/* Center Logo Upload (Optional Feature #43) */}
+      {/* Center Logo Upload */}
       <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -272,26 +349,56 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </div>
 
         {config.logo ? (
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3">
-              <img
-                src={config.logo}
-                alt="Logo preview"
-                className="w-10 h-10 object-contain rounded-lg bg-white p-1 border shadow-xs"
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <img
+                  src={config.logo}
+                  alt="Logo preview"
+                  className="w-10 h-10 object-contain rounded-lg bg-white p-1 border shadow-xs"
+                />
+                <div className="text-xs">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">Custom logo applied</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">High (H) error correction active</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onLogoUpload(null)}
+                className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
+                title="Remove logo"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Logo Scale Control */}
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Logo Scale</span>
+                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                  {config.logoSize || 20}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={25}
+                step={1}
+                value={config.logoSize || 20}
+                onChange={(e) => onChange('logoSize', Number(e.target.value))}
+                className="w-full accent-indigo-600 dark:accent-indigo-500 cursor-pointer"
               />
-              <div className="text-xs">
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Custom logo applied</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">High (H) error correction active</p>
+              <div className="flex justify-between text-[10px] text-slate-400">
+                <span>10% (Subtle)</span>
+                <span>20% (Standard)</span>
+                <span>25% (Maximum)</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => onLogoUpload(null)}
-              className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
-              title="Remove logo"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">
+              Logos cover center data modules. Supported in both PNG and vector SVG exports with protective backing.
+            </p>
           </div>
         ) : (
           <div>
@@ -310,7 +417,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               className="hidden"
             />
             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 text-center">
-              Processed locally in browser. Adds clean protective backing automatically.
+              Processed locally in browser. Automatically scales image for fast rendering and storage.
             </p>
           </div>
         )}

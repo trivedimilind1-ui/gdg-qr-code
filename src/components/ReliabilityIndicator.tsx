@@ -20,7 +20,7 @@ export const ReliabilityIndicator: React.FC<ReliabilityIndicatorProps> = ({ asse
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Scan Reliability Score
+            Estimated Scan Readability
           </span>
         </div>
 
@@ -37,7 +37,7 @@ export const ReliabilityIndicator: React.FC<ReliabilityIndicatorProps> = ({ asse
           {isExcellent && <CheckCircle2 className="w-3.5 h-3.5" />}
           {isGood && <Info className="w-3.5 h-3.5" />}
           {isWarning && <AlertTriangle className="w-3.5 h-3.5" />}
-          <span className="capitalize">{status} ({score}%)</span>
+          <span>{isExcellent ? 'Optimal' : isGood ? 'Good' : 'Needs Review'} ({score}/100)</span>
         </div>
       </div>
 
@@ -59,13 +59,13 @@ export const ReliabilityIndicator: React.FC<ReliabilityIndicatorProps> = ({ asse
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
           <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-            Luminance Contrast
+            Color Contrast
           </span>
           <span
             className={`font-semibold ${
-              contrastStatus === 'excellent'
+              contrastStatus === 'strong'
                 ? 'text-emerald-600 dark:text-emerald-400'
-                : contrastStatus === 'good'
+                : contrastStatus === 'acceptable'
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-amber-600 dark:text-amber-400'
             }`}
@@ -113,8 +113,8 @@ export const ReliabilityIndicator: React.FC<ReliabilityIndicatorProps> = ({ asse
         </div>
       )}
 
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 italic pt-1">
-        * Estimates camera scanning readability based on ISO/IEC 18004 and WCAG guidelines.
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 italic pt-1 leading-relaxed">
+        * Based on contrast, quiet zone, error correction and customization. Actual scan performance can vary by device, screen, lighting and printing conditions.
       </p>
     </div>
   );
