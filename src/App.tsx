@@ -153,7 +153,17 @@ export function App() {
 
   // Helper to fingerprint a configuration for duplicate detection
   const getConfigFingerprint = useCallback((cfg: QRConfig, pld: string) => {
-    return `${cfg.type}::${pld}::${cfg.foreground}::${cfg.background}::${cfg.margin}::${cfg.errorCorrection}::${cfg.logo ? '1' : '0'}`;
+    return [
+      cfg.type,
+      pld,
+      cfg.size,
+      cfg.foreground,
+      cfg.background,
+      cfg.margin,
+      cfg.errorCorrection,
+      cfg.logo ? '1' : '0',
+      cfg.logoSize ?? 20,
+    ].join('::');
   }, []);
 
   // Save or update an entry in history without duplicate spam

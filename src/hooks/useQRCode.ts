@@ -117,7 +117,6 @@ export function useQRCode(config: QRConfig, payload: string): UseQRCodeReturn {
     };
   }, [
     payload,
-    config.size,
     config.foreground,
     config.background,
     config.errorCorrection,
